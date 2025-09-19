@@ -2,18 +2,17 @@ import Database from "better-sqlite3"
 import path from "path"
 import fs from "fs"
 
-// Store the DB under .data in the project root
-const dataDir = path.join(process.cwd(), ".data")
+const customPath = process.env.DB_PATH
+// Store the DB under .data in the project root by default
+const dataDir = customPath ? path.dirname(customPath) : path.join(process.cwd(), ".data")
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true })
 }
 
-const dbPath = path.join(dataDir, "app.db")
+const dbPath = customPath || path.join(dataDir, "app.db")
 export const db = new Database(dbPath)
 
 // Auto-migrate minimal schema
-// Links: id, url, title (optional), category, created_at
-// Note: keep it simple, no foreign keys
 const createTableSql = `
   CREATE TABLE IF NOT EXISTS links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,5 +31,10 @@ export type LinkRow = {
   title: string | null
   category: string
   created_at: string
+}
+
+export function resetDatabase() {
+  db.exec("DROP TABLE IF EXISTS links;")
+  db.exec(createTableSql)
 }
 
