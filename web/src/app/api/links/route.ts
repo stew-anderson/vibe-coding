@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server"
 import { db, type LinkRow } from "@/lib/db"
+import { isAllowedCategory } from "@/lib/categories"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const category = searchParams.get("category")
+
+  if (category && !isAllowedCategory(category)) {
+    return NextResponse.json({ error: "Invalid category" }, { status: 400 })
+  }
+
   const stmt = category
     ? db.prepare<LinkRow>("SELECT * FROM links WHERE category = ? ORDER BY created_at DESC")
     : db.prepare<LinkRow>("SELECT * FROM links ORDER BY created_at DESC")
@@ -19,6 +25,10 @@ export async function POST(request: Request) {
   const url: string = String(body.url)
   const title: string | null = body.title ? String(body.title) : null
   const category: string = String(body.category)
+
+  if (!isAllowedCategory(category)) {
+    return NextResponse.json({ error: "Invalid category" }, { status: 400 })
+  }
 
   const insert = db.prepare("INSERT INTO links (url, title, category) VALUES (?, ?, ?)")
   const info = insert.run(url, title, category)
